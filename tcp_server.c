@@ -29,9 +29,12 @@ int server_setup(struct sockaddr_in * address){
     exit(EXIT_FAILURE);
   }
 
-  if((setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY||SO_REUSEADDR,&opt, sizeof(opt)))!=0)
+  if((setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY,&opt, sizeof(opt)))!=0)
+    printf("failed to set socket options\n");
+  if((setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR,&opt, sizeof(opt)))!=0)
     printf("failed to set socket options\n");
   
+
   address->sin_family = AF_INET;
   address->sin_addr.s_addr = INADDR_ANY;
   address->sin_port = htons(PORT);
@@ -47,10 +50,13 @@ void * handle_client(void *connfd){
   /*use this start routine for each connections*/
   int sock = *(int *)connfd;
   char buffer[BUFFER_SIZE];
-  if( (read(sock, buffer, BUFFER_SIZE)) == 0 ){
+  int n = read(sock, buffer, BUFFER_SIZE); 
+  if( n <= 0 ){
     printf("nothing typed");
+  }else{
+    buffer[n]  ='\0';
+    printf("Client says: %s", buffer);
   }
-  printf("Client says: %s", buffer);
   char * msg = "Got it babyyyyy!!!";
   send(sock,msg,strlen(msg)+1,0);
   close(sock);
@@ -63,11 +69,18 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address){
   /* listen and respond to multiple clients 
    * using threads for each  connection. */
   socklen_t addrlen = sizeof(*address);
-  listen(server_fd, 5);
+  if (listen(server_fd, 5) == -1) {
+    perror("failed to listen");
+    exit(0);
+  }
   printf("Server is listening on port %d \n",PORT);
 
   while(1){
     int new_socket  = accept(server_fd,(struct sockaddr *)address,&addrlen);
+    if(new_socket == -1){
+      perror("connection failed");
+      continue;
+    }
     int *new_sock = (int *) malloc(sizeof(int));
     *new_sock  = new_socket;
 
