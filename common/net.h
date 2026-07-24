@@ -110,4 +110,11 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address){
 
 
 
+//driver code should be removed
+int main(int argc, char * argv[]){
+  struct sockaddr_in addr;
+  int server = server_setup(&addr);
+  server_listen_and_respond(server,&addr);
 
+  return 0;
+}
