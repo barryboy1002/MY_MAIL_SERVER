@@ -24,12 +24,12 @@ int server_setup(struct sockaddr_in * address){
   int server_fd =  socket(AF_INET, SOCK_STREAM, 0);
   int opt = 1 ;
 
-  if (server_fd == 0){
+  if (server_fd == -1){
     perror("socket_failed\n");
     exit(EXIT_FAILURE);
   }
 
-  if((setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY,&opt, sizeof(opt)))!=0)
+  if((setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY||SO_REUSEADDR,&opt, sizeof(opt)))!=0)
     printf("failed to set socket options\n");
   
   address->sin_family = AF_INET;
@@ -47,7 +47,9 @@ void * handle_client(void *connfd){
   /*use this start routine for each connections*/
   int sock = *(int *)connfd;
   char buffer[BUFFER_SIZE];
-  read(sock, buffer, BUFFER_SIZE);
+  if( (read(sock, buffer, BUFFER_SIZE)) == 0 ){
+    printf("nothing typed");
+  }
   printf("Client says: %s", buffer);
   char * msg = "Got it babyyyyy!!!";
   send(sock,msg,strlen(msg)+1,0);
