@@ -32,7 +32,7 @@ int server_setup(struct sockaddr_in * address){
 void * handle_client(void *conninfo){
   /*use this start routine for each connections*/
   client_info * c_info = (client_info*)conninfo; 
-  int sock = *(int *)c_info->connfd;
+  int sock = c_info->conn_fd;
   char buffer[BUFFER_SIZE];
   int n = read(sock, buffer, BUFFER_SIZE);
   pthread_mutex_lock(&(c_info->c_state->lock));
@@ -75,10 +75,8 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address){
       perror("connection failed");
       continue;
     }
-    int *new_sock = (int *) malloc(sizeof(int));
-    *new_sock  = new_socket;
     client_info *  c_info = (client_info *)malloc(sizeof(client_info));
-    c_info->connfd = new_sock;
+    c_info->conn_fd = new_socket;
     c_info->c_state = &cs;
 
     pthread_t thread_id;
@@ -89,6 +87,16 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address){
     
   close(server_fd);
   
+}
+
+//driver code 
+int main(int argc, char * argv[]){
+  struct sockaddr_in addr;
+  int server_fd = server_setup(&addr);
+  server_listen_and_respond(server_fd,&addr);
+
+  return 0;
+
 }
 
 

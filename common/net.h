@@ -19,7 +19,7 @@ typedef struct {
 
 typedef struct{
   /*to track a clients state*/
-  int * connfd;
+  int  conn_fd;
   connection_state * c_state;
 }client_info;
 int server_setup(struct sockaddr_in * address);
