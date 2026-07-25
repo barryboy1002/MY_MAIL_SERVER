@@ -13,9 +13,9 @@ int server_setup(struct sockaddr_in * address){
   }
 
   if((setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY,&opt, sizeof(opt)))!=0)
-    printf("failed to set socket options\n");
+    fprintf(stderr,"failed to set socket options\n");
   if((setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR,&opt, sizeof(opt)))!=0)
-    printf("failed to set socket options\n");
+    fprintf(stderr,"failed to set socket options\n");
   
 
   address->sin_family = AF_INET;
@@ -43,7 +43,7 @@ void * handle_client(void *conninfo){
     fprintf(stderr, "nothing typed\n");
   }else{
     buffer[n]  ='\0';
-    printf("Client says: %s", buffer);
+    fprintf(stderr,"Client says: %s", buffer);
   }
   char * msg = "Got it babyyyyy!!!";
   send(sock,msg,strlen(msg)+1,0);
@@ -65,7 +65,7 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address){
     perror("failed to listen");
     exit(0);
   }
-  printf("Server is listening on port %d \n",PORT);
+  fprintf(stderr,"Server is listening on port %d \n",PORT);
   
   connection_state cs ={.lock = PTHREAD_MUTEX_INITIALIZER,
                         .connection_no  =0};
