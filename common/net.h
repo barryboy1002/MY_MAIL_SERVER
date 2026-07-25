@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #ifndef NET_H
 #define NET_H
-#define PORT 8080
 #define BUFFER_SIZE 1024
 
 typedef struct {
@@ -22,8 +21,8 @@ typedef struct{
   int  conn_fd;
   connection_state * c_state;
 }client_info;
-int server_setup(struct sockaddr_in * address);
+int server_setup(int port ,struct sockaddr_in * address);
 void * handle_client(void *conninfo);
-void  server_listen_and_respond(int server_fd,struct sockaddr_in* address);
+void  server_listen_and_respond(int server_fd,struct sockaddr_in* address,int port);
 
 #endif // !DEBUG
