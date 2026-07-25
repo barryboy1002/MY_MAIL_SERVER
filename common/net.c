@@ -1,28 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <pthread.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
+#include "net.h"
 /*use this tcp server to handle your multiple request from your mail servers
  * use port 8080 for now*/
-
-#define PORT 8080
-#define BUFFER_SIZE 1024
-
-typedef struct {
-  pthread_mutex_t lock;
-  int connection_no; //no of threads or connections
-}connection_state;
-
-typedef struct{
-  /*to track a clients state*/
-  int * connfd;
-  connection_state * c_state;
-}client_info;
 
 
 int server_setup(struct sockaddr_in * address){
@@ -56,19 +34,24 @@ void * handle_client(void *conninfo){
   client_info * c_info = (client_info*)conninfo; 
   int sock = *(int *)c_info->connfd;
   char buffer[BUFFER_SIZE];
-  pthread_mutex_lock(&(c_info->c_state->lock));
   int n = read(sock, buffer, BUFFER_SIZE);
+  pthread_mutex_lock(&(c_info->c_state->lock));
+    c_info->c_state->connection_no++;
+    fprintf(stderr, "active connections: %d\n", c_info->c_state->connection_no);
+  pthread_mutex_unlock(&(c_info->c_state->lock));
   if( n <= 0 ){
     fprintf(stderr, "nothing typed\n");
-    fprintf(stderr, "Client says: %s\n", buffer);
   }else{
     buffer[n]  ='\0';
     printf("Client says: %s", buffer);
   }
   char * msg = "Got it babyyyyy!!!";
-  pthread_mutex_unlock(&(c_info->c_state->lock));
   send(sock,msg,strlen(msg)+1,0);
   close(sock);
+   pthread_mutex_lock(&(c_info->c_state->lock));
+    c_info->c_state->connection_no--;
+    fprintf(stderr, "active connections: %d\n", c_info->c_state->connection_no);
+  pthread_mutex_unlock(&(c_info->c_state->lock));
   free(c_info);
   return NULL;
 }
@@ -110,11 +93,3 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address){
 
 
 
-//driver code should be removed
-int main(int argc, char * argv[]){
-  struct sockaddr_in addr;
-  int server = server_setup(&addr);
-  server_listen_and_respond(server,&addr);
-
-  return 0;
-}
