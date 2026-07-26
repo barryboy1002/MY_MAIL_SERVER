@@ -24,11 +24,12 @@ int server_setup(int port,struct sockaddr_in * address){
   
   if((bind(server_fd, (struct sockaddr *)address, sizeof(*address))) != 0){
     perror("Socket binding failed please.\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   return server_fd;
 }
 
+/*this is the default handler of clients for the tcp server*/
 void * handle_client(void *conninfo){
   /*use this start routine for each connections*/
   client_info * c_info = (client_info*)conninfo; 
@@ -63,18 +64,18 @@ void * handle_client(void *conninfo){
 }
 
 
-void  server_listen_and_respond(int server_fd,struct sockaddr_in* address,int port){
+void  server_listen_and_respond(int server_fd,struct sockaddr_in* address,int port, client_handler_fn handler){
   /* listen and respond to multiple clients 
    * using threads for each  connection. */
   socklen_t addrlen = sizeof(*address);
-  if (listen(server_fd, 5) == -1) {
+  if (listen(server_fd, 10) == -1) {
     perror("failed to listen");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   fprintf(stderr,"Server is listening on port %d \n",port);
   
   connection_state cs ={.lock = PTHREAD_MUTEX_INITIALIZER,
-                        .connection_no = 0};
+                        .connection_no  = 0};
   while(1){
     int new_socket  = accept(server_fd,(struct sockaddr *)address,&addrlen);
     if(new_socket == -1){
@@ -82,12 +83,15 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address,int po
       continue;
     }
     client_info *  c_info = (client_info *)malloc(sizeof(client_info));
+    if(c_info == NULL){
+      exit(EXIT_FAILURE);
+    }
     c_info->conn_fd = new_socket;
     c_info->c_state = &cs;
 
     pthread_t thread_id;
     
-    pthread_create(&thread_id, NULL, handle_client, (void *)c_info);
+    pthread_create(&thread_id, NULL, handler, (void *)c_info);
     pthread_detach(thread_id);
   }
     
@@ -100,7 +104,7 @@ int main(int argc, char * argv[]){
   struct sockaddr_in addr;
   int port = 8080;
   int server_fd = server_setup(port,&addr);
-  server_listen_and_respond(server_fd,&addr,port);
+  server_listen_and_respond(server_fd,&addr,port,handle_client);
 
   return 0;
 
