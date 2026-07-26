@@ -99,16 +99,7 @@ void  server_listen_and_respond(int server_fd,struct sockaddr_in* address,int po
   
 }
 
-//driver code 
-int main(int argc, char * argv[]){
-  struct sockaddr_in addr;
-  int port = 8080;
-  int server_fd = server_setup(port,&addr);
-  server_listen_and_respond(server_fd,&addr,port,handle_client);
 
-  return 0;
-
-}
 
 
 
