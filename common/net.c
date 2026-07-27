@@ -3,6 +3,30 @@
  * use port 8080 for now*/
 
 
+int read_line(int fd, char * buf , int maxlen){
+ int i = 0;
+ char c;
+ while(1){
+   int n = read(fd,&c,1);
+   if(n <= 0){
+    return CLOSED_OR_COLLAPSED;
+   }
+   if(c =='\n'){
+     break;
+   }
+   if(c == '\r'){
+     continue;
+   }
+   if(i >= maxlen -1){
+     return LINE_TOO_LONG;
+   }
+  buf[i] = c;
+  i += 1;
+ }
+  buf[i] = '\0';
+  return i;
+}
+
 int server_setup(int port,struct sockaddr_in * address){
   int server_fd =  socket(AF_INET, SOCK_STREAM, 0);
   int opt = 1 ;

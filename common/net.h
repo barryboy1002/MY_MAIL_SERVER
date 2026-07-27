@@ -10,6 +10,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #define BUFFER_SIZE 1024
+#define CLOSED_OR_COLLAPSED -1
+#define LINE_TOO_LONG -2
+
 
 typedef struct {
   pthread_mutex_t lock;
@@ -24,6 +27,7 @@ typedef struct{
 
 typedef void*(*client_handler_fn)(void *);
 
+int read_line(int fd, char * buf, int maxlen);
 int server_setup(int port ,struct sockaddr_in * address);
 void * handle_client(void *conninfo);
 void  server_listen_and_respond(int server_fd, struct sockaddr_in* address, int port, client_handler_fn handler);
