@@ -53,7 +53,8 @@ int server_setup(int port,struct sockaddr_in * address){
   return server_fd;
 }
 
-/*this is the default handler of clients for the tcp server*/
+/* This is the default handler of clients for the tcp server
+ * feel free to use it as an example */
 void * handle_client(void *conninfo){
   /*use this start routine for each connections*/
   client_info * c_info = (client_info*)conninfo; 
