@@ -19,7 +19,39 @@ int send_ok(int sock, sv_response * response){
   return 0;
 }
 
+int check_envelope_commands(const char * command1,const char * command2,char cl_response[], char  command[],char rest[],int delinumber){
+  sscanf(cl_response,"%15s %111s", command,rest);
+  command[15] = '\0'; 
+  rest[111] = '\0';
+  if((strcasecmp(command,command1)) != 0){
+    fprintf(stderr,"Invalid command %s\n", command);
+    return -1;
+  }
 
+  memset(command,0, strlen(command));
+  if((strncasecmp(rest,command2,delinumber)) != 0){
+    fprintf(stderr,"Invalid command %s\n", rest);
+    return -1;
+  }
+  return 0;
+
+}
+
+int extract_email(char * field,char * out,size_t outlen){
+  const char * start = strchr(field,'<');
+  const char * end = strchr(field, '>');
+
+  if(!start||!end ||end <= start) return -1;
+  
+  size_t len = end - start -1 ;
+  if (len >= outlen )return -1 ;
+
+  memcpy(out,start+1,len);
+  out[len] = '\0';
+  memset(field,0,strlen(field));
+
+  return 0;
+}
 
 int greeting(int sock, smtp_session * session_state){
   const char * init_msg = "mail.example.com";
@@ -67,28 +99,32 @@ int check_envelopes(int sock ,smtp_session * session_state){
   //processing the MAIL FROM
   char command[16] = {0};
   char rest[112] = {0};
-  sscanf(cl_response,"%15s %111s", command,rest);
-  command[15] = '\0'; 
-  rest[111] = '\0';
-  if((strcasecmp(command,"MAIL")) != 0){
-    fprintf(stderr,"Invalid command %s\n", command);
-    return -1;
-  }
-  if((strncasecmp(rest,"FROM:",5)) != 0){
-    fprintf(stderr,"Invalid command %s\n", command);
-    return -1;
-  }
+  if(check_envelope_commands("MAIL", "FROM:", cl_response,command,rest,5) == -1) return -1;
   
+  if(extract_email(rest,session_state->mail_from,strlen(rest)-5)==-1) return -1;
+  printf("%s\n",session_state->mail_from); 
   //will add storage and stuff but for now jus 
   int ok = send_ok(sock, &(session_state->responses));
   if(ok < 0){
     return -1;
   }
+
   session_state->status = SMTP_HAVE_FROM;
+  
+  memset(cl_response,0, strlen(cl_response));
+  if(read_line(sock,cl_response,128) <= 0){
+    fprintf(stderr,"failed to read %d\n", rc);
+    return -1;
+  }
 
+  if(check_envelope_commands("RCPT", "TO:", cl_response,command,rest,3) == -1) return -1;
+  
+  if(extract_email(rest,session_state->mail_to[0],strlen(rest)-3)==-1) return -1;
+  printf("%s\n",session_state->mail_to[0]); 
+ 
+  
+  session_state->status = SMTP_HAVE_RCPT;
   return 0;
-
-
 }
 
 void * smtp_handle_client(void * conninfo){

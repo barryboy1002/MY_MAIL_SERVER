@@ -23,16 +23,18 @@ typedef enum{
 typedef struct {
   sv_response  responses;
   smtp_state status;
-  char * mail_from;
+  char mail_from[128];
   char * subject;
   char * body;
-  char * mail_to[];
+  char  mail_to[128][128];
 }smtp_session;
 
 //helper functions.
+int extract_email(char *, char * , size_t);
 int send_ok(int sock, sv_response * response);
 void gen_server_message(sv_response *,int ,const char*);
 void cleanup(int , client_info*);
+
 
 int greeting(int , smtp_session *);
 int check_envelopes(int, smtp_session *);
