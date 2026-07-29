@@ -12,9 +12,30 @@ typedef struct{
   char f_msg[128];
 }sv_response;
 
+typedef enum{
+  SMTP_INIT,     //waiting for HELO/EHLO
+  SMTP_GREETED,   //waiting for MAIL FROM 
+  SMTP_HAVE_FROM, //waiting for RCPT TO (can  repeat  for  multiple recipients)
+  SMTP_HAVE_RCPT, //waiting  for DATA or another RCPT TO 
+  SMTP_IN_DATA  //accumulating  message body until lone "."
+}smtp_state;
+
+typedef struct {
+  sv_response  responses;
+  smtp_state status;
+  char * mail_from;
+  char * subject;
+  char * body;
+  char * mail_to[];
+}smtp_session;
+
+//helper functions.
+int send_ok(int sock, sv_response * response);
 void gen_server_message(sv_response *,int ,const char*);
 void cleanup(int , client_info*);
-int greeting(int , sv_response *);
+
+int greeting(int , smtp_session *);
+int check_envelopes(int, smtp_session *);
 
 void * smtp_handle_client(void * conninfo); 
 
