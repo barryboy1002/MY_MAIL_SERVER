@@ -19,6 +19,42 @@ int send_ok(int sock, sv_response * response){
   return 0;
 }
 
+int handle_recipients(int sock,smtp_session * session_state,char cl_response[],char command[],char rest[]){
+  while(1){
+    int rc = read_line(sock,cl_response,128);
+    if( rc <= 0){
+      fprintf(stderr,"failed to read %d\n",rc);
+      return -1;
+    }
+    if(check_envelope_commands("RCPT", "TO:", cl_response,command,rest,3) == 0){
+      if(session_state->recipient_count >= MAX_RECIPIENTS){
+        fprintf(stderr,"too many recipients\n");
+        return -1;
+      }
+      char * dest = session_state->mail_to[session_state->recipient_count];
+      if(extract_email(rest,dest,sizeof(session_state->mail_to[0]))==-1) {
+        fprintf(stderr,"bad RCPT TO address\n");
+        return -1;
+      }
+      printf("%s\n",session_state->mail_to[session_state->recipient_count]); 
+      session_state->recipient_count ++;
+      session_state->status = SMTP_HAVE_RCPT;
+      if (send_ok(sock, &session_state->responses) < 0) return -1;
+      continue;
+    }
+
+    if(strcasecmp(command,"DATA") == 0){
+      if(session_state->recipient_count == 0){
+        fprintf(stderr,"DATA WITH NO RECIPIENTS\n");
+        return -1; //I know real smtp would return 503
+      }
+      return 0;
+    }
+    fprintf(stderr, "unexpected command while collecting recipients: %s\n", command);
+    return -1;
+  }
+}
+
 int check_envelope_commands(const char * command1,const char * command2,char cl_response[], char  command[],char rest[],int delinumber){
   sscanf(cl_response,"%15s %111s", command,rest);
   command[15] = '\0'; 
@@ -101,7 +137,7 @@ int check_envelopes(int sock ,smtp_session * session_state){
   char rest[112] = {0};
   if(check_envelope_commands("MAIL", "FROM:", cl_response,command,rest,5) == -1) return -1;
   
-  if(extract_email(rest,session_state->mail_from,strlen(rest)-5)==-1) return -1;
+  if(extract_email(rest,session_state->mail_from,sizeof(session_state->mail_from))==-1) return -1;
   printf("%s\n",session_state->mail_from); 
   //will add storage and stuff but for now jus 
   int ok = send_ok(sock, &(session_state->responses));
@@ -112,19 +148,9 @@ int check_envelopes(int sock ,smtp_session * session_state){
   session_state->status = SMTP_HAVE_FROM;
   
   memset(cl_response,0, strlen(cl_response));
-  if(read_line(sock,cl_response,128) <= 0){
-    fprintf(stderr,"failed to read %d\n", rc);
-    return -1;
-  }
-
-  if(check_envelope_commands("RCPT", "TO:", cl_response,command,rest,3) == -1) return -1;
   
-  if(extract_email(rest,session_state->mail_to[0],strlen(rest)-3)==-1) return -1;
-  printf("%s\n",session_state->mail_to[0]); 
- 
-  
-  session_state->status = SMTP_HAVE_RCPT;
-  return 0;
+  handle_recipients(sock, session_state,cl_response,command,rest);
+ return 0;
 }
 
 void * smtp_handle_client(void * conninfo){
@@ -145,7 +171,7 @@ void * smtp_handle_client(void * conninfo){
       return NULL;
     }
   }
-  
+  if(session_state.status == SMTP_GREETED){} 
 
   cleanup(sock,c_info);
   return NULL;
